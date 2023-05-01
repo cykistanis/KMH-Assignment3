@@ -4,6 +4,7 @@ const crypto = require('crypto');
 // import in the CheckIfAuthenticated middleware
 
 const { checkIfAuthenticated } = require('../middlewares');
+const flash = require('connect-flash');
 
 const getHashedPassword = (password) => {
     const sha256 = crypto.createHash('sha256');
@@ -67,7 +68,7 @@ router.post('/login', async (req, res) => {
 
             if (!user) {
                 req.flash("error_messages", "Sorry, the authentication details you provided does not work.")
-                res.redirect('/users/profile');
+                return res.redirect('/users/profile');
             } else {
                 // check if the password matches
                 if (user.get('password') === getHashedPassword(form.data.password)) {
@@ -80,10 +81,10 @@ router.post('/login', async (req, res) => {
                         email: user.get('email')
                     }
                     req.flash("success_messages", "Welcome back, " + user.get('username'));
-                    res.redirect('/users/profile');
+                    return res.redirect('/users/profile');
                 } else {
                     req.flash("error_messages", "Sorry, the authentication details you provided does not work.")
-                    res.redirect('/users/login')
+                   return   res.redirect('/users/login')
                 }
             }
         }, 'error': (form) => {
@@ -93,7 +94,7 @@ router.post('/login', async (req, res) => {
             })
         }
     })
-})
+},checkIfAuthenticated)
 
 router.get('/profile', checkIfAuthenticated,(req, res) => {
     const user = req.session.user;
@@ -108,26 +109,7 @@ router.get('/profile', checkIfAuthenticated,(req, res) => {
 
 })
 
-// router.get('/logout', (req, res) => {
-//     req.session.user = null;
-//     req.flash('success_messages', "Goodbye");
-//     res.redirect('/users/login');
-// })
 
-
-// router.get("/logout", (req, res) => {
-//     if (req.session.user) {
-//       req.session.destroy((err) => {
-//         if (err) {
-//           console.log(err);
-//         } else {
-//           res.redirect("/users/login");
-//         }
-//       });
-//     } else {
-//       res.redirect("/users/login");
-//     }
-//   });
 
   router.get("/logout", (req, res) => {
     if (req.session.user) {

@@ -76,27 +76,58 @@ router.get('/error', function(req,res){
 })
 
 
-router.post('/process_payment', express.raw({type: 'application/json'}), async (req, res) => {
-    let payload = req.body;
-    let endpointSecret = process.env.STRIPE_ENDPOINT_SECRET;
-    let sigHeader = req.headers["stripe-signature"];
-    let event;
-    try {
-        event = Stripe.webhooks.constructEvent(payload, sigHeader, endpointSecret);
+// router.post('/process_payment', express.raw({type: 'application/json'}), async (req, res) => {
+//     let payload = req.body;
+//     let endpointSecret = process.env.STRIPE_ENDPOINT_SECRET;
+//     let sigHeader = req.headers["stripe-signature"];
+//     let event;
+//     try {
+//         event = Stripe.webhooks.constructEvent(payload, sigHeader, endpointSecret);
 
-    } catch (e) {
-        res.send({
-            'error': e.message
-        })
-        console.log(e.message)
-    }
-    if (event.type == 'checkout.session.completed') {
-        let stripeSession = event.data.object;
-        console.log(stripeSession);
-        // process stripeSession
-    }
-    res.send({ received: true });
-})
+//     } catch (e) {
+//         res.send({
+//             'error': e.message
+//         })
+//         console.log(e.message)
+//     }
+//     if (event.type == 'checkout.session.completed') {
+//         let stripeSession = event.data.object;
+//         console.log(stripeSession);
+//         // process stripeSession
+//     }
+//     res.send({ received: true });
+// })
+
+router.post("/process_payment", express.raw({type:"application/json"}) , async function(req,res){
+        const payload = req.body;  // extract the payload from req.body (i.e what stripe is sending us)
+        const endpointSecret = process.env.STRIPE_ENDPOINT_SECRET; // use for verifying if the payload comes from Stripe
+        const sigHeader = req.headers["stripe-signature"]; // a hash of the payload using STRIPE_ENDPOINT_SECRET
+        let event = null; // to store the Stripe event (to be determined later)
+        try {
+            // determine what the event
+            event = Stripe.webhooks.constructEvent(payload, sigHeader, endpointSecret);
+            if (event.type === "checkout.session.completed") {
+                const stripeSession = event.data.object;
+                console.log(stripeSession);
+                // retriving the order data
+                const orderData = JSON.parse(stripeSession.metadata.orders);
+                console.log(orderData);
+    
+            }
+            res.status(200);
+            res.json({
+                'message': "success"
+            })
+        } catch (e) {
+            // if there's an error when we attempt an event, we inform stripe there's an error
+            res.status(500);
+            res.json({
+                'error': e.message
+            })
+            console.log(e.message);
+        }
+    
+    });
 
 module.exports = router;
 
